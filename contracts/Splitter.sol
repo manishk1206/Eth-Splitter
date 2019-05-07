@@ -3,38 +3,62 @@ pragma solidity ^0.5.0;
 contract Splitter{
     
     address public Alice;
+    mapping(address => uint) public balances;
     
-    event LogSplitFundsBob(address, uint);
-    event LogSplitFundsCarol(address, uint);
-    event LogReturnedFunds(address, uint);
-    
+    event LogSplitFunds(address indexed beneficiary, uint indexed amount, uint indexed mywei);
+    event LogWithdrawnFunds(address indexed beneficiary, uint indexed amount);
+
     constructor () public payable{
         Alice = msg.sender;
     }
-    function splitBalance(address payable _bob, address payable _carol) 
-    public payable returns(uint amount1){
-        // only Alice can send ether to be split
-        require(msg.sender == Alice);
-         // There should be some value to split
-        require ( msg.value > 0 );
-        // Bob and Carol should have a valid address
-        require( _bob != address(0));
-        require( _carol != address(0));
+    
+    modifier onlyAlice(){
+        
+        require(msg.sender == Alice, "You are not Alice almighty, buzz off!" );
+        _;
+    }
+    
+    //Main function that is used to Split the funds by Alice
+    function splitBalance(address _bob, address _carol) public payable onlyAlice returns(bool isSuccess){
 
-        amount1 = msg.value/2;
-        _bob.transfer (amount1);
-        emit LogSplitFundsBob(_bob,amount1);
-        _carol.transfer(amount1);
-        emit LogSplitFundsCarol(_carol,amount1);
+        require ( msg.value > 0, "There should be some non-zero value to split" );
+        
+        // Bob and Carol should have a valid address
+        require( _bob != address(0)&&_carol != address(0));
+
+        uint split = msg.value/2;
+        uint mywei = msg.value%2;  //in case of odd msg.value, 1 wei will be left
+        
+        balances[_bob] += split;
+        emit LogSplitFunds(_bob,balances[_bob],0);
+        
+        balances[_carol] += split;
+        emit LogSplitFunds(_carol,balances[_carol],0);
+        
+        if (mywei > 0) {
+            address(msg.sender).transfer(mywei);
+        }
+        emit LogSplitFunds(msg.sender,0,mywei);
+        
+        return true;
     }
-    function refundBalance() public  {
-        require(msg.sender == Alice);
-        uint balance = address(this).balance;
-        require ( balance > 0 );
-        emit LogReturnedFunds(msg.sender, balance);
-        msg.sender.transfer(balance);
-  }
-    function getBalance (address _who) public view returns (uint bal){
-      bal = (_who).balance;
+    
+    //Pull pattern for withdrawing funds as suggested by Adel
+    function withdrawFunds() public  {
+        uint myBalance = balances[msg.sender];
+        require(myBalance > 0, "No balance to withdraw");
+        balances[msg.sender] = 0; // Making balance 0 in the mapping as it would be withdrawn 
+        address(msg.sender).transfer(myBalance);
+        emit LogWithdrawnFunds(msg.sender, myBalance);
     }
-}
+    
+    //Kill the contract and transfer any remaining funds back to owner(Alice)
+    function kill() external onlyAlice {
+        selfdestruct(msg.sender); 
+    }
+    
+    //fall-back function
+    function() external {
+        revert("Default Call to fallback");
+    }
+ }
