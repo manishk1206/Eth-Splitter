@@ -17,7 +17,7 @@ contract Splitter is Pausable{
     }
     
     //Main function that is used to Split the funds
-    function splitBalance(address receiver1, address receiver2) public payable onlyOwner onlyIfRunning returns(bool isSuccess) {
+    function splitBalance(address receiver1, address receiver2) public payable onlyIfRunning returns(bool isSuccess) {
 
         require ( msg.value > 0, "There should be some non-zero value to split" );
         
