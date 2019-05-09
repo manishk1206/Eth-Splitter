@@ -13,8 +13,13 @@ contract Pausable is Ownable{
         _;
     }
     
-    constructor() public{
-        isRunning = true;
+    modifier onlyIfPaused {
+        require(!isRunning);
+        _;
+    }
+    
+    constructor(bool _state) public{
+        isRunning = _state;
     }
     
     function pauseContract() public onlyOwner onlyIfRunning returns (bool success){
@@ -23,10 +28,13 @@ contract Pausable is Ownable{
         return true;
     }
     
-    function resumeContract() public onlyOwner onlyIfRunning returns (bool success){
-        require(!isRunning);
+    function resumeContract() public onlyOwner onlyIfPaused returns (bool success){
         isRunning = true;
         emit LogResumedContract(msg.sender);
         return true;
+    }
+    
+    function kill() external onlyOwner onlyIfPaused {
+        selfdestruct(msg.sender); 
     }
 }
