@@ -12,7 +12,7 @@ contract Splitter is Pausable{
     event LogSplitFunds(address indexed splitby,address indexed beneiciary, uint indexed amount);
     event LogWithdrawnFunds(address indexed beneficiary, uint indexed amount);
 
-    constructor () public payable{
+    constructor (bool _state) Pausable(_state) public payable {
         
     }
     
